@@ -2,6 +2,13 @@
 
 Newest first. Issue IDs are beads (`bd show <id>`).
 
+## 2026-10-10 (rename + interactive prefs) — "macsimize"
+
+- **Renamed the repo to `macsimize`** (was `macbookpro-server` — named after one machine, which the Contributing section itself flagged as not-general). GitHub repo + `origin` remote + human-facing doc/clone references updated. Internal `com.macbookpro-server.*` LaunchAgent labels, the `macbookpro-server-pmset` sudoers filename, and the beads prefix left as-is (changing live agent labels is a separate, deliberate pass).
+- **`scripts/setup` now branches on the personal-taste decisions** instead of imposing them (new `lib/prefs.sh`, `ask_yn` in `common.sh`): disable automatic macOS updates (default yes — they cause surprise reboots), keep FileVault on (default yes; never auto-toggled — it re-encrypts the disk, so setup prints the command), and install the boot re-assert agent (default yes). `--yes` accepts all defaults; non-tty/dry-run uses defaults so it never blocks.
+- **README reframed**: the top "why" is now the general case (a macOS machine — especially a laptop — you want to act as a server without sleeping/connectivity issues); the agentic-coding framing moved into "Suggested setup" ("run it for anything; here's the stack I built it for"). Added an **Expected behavior** section (lock/lid/display, AC vs battery, reboot + FileVault) and a **Preferences you choose at setup** section.
+- Offline harness green with the new lib. Nothing destructive run (auto-update was already off; FileVault left on).
+
 ## 2026-10-10 (turnkey) — one-command setup + reachability owned here
 
 - **New `scripts/setup`** — the single turnkey entrypoint. Installs + configures Tailscale (standalone), installs `mosh-server`, enables Remote Login, installs the boot re-asserter, flips to server mode, then prints a numbered **"steps only you can do"** checklist (Tailscale browser login, key-expiry off, the optional `pmset` grant, FileVault reboot note, optional SSH hardening). `--dry-run` supported; non-fatal per-step failures become checklist items instead of aborting.

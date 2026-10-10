@@ -1,19 +1,44 @@
-# macbookpro-server
+# macsimize
 
 Turn a Mac into an always-on, [Tailnet](https://tailscale.com)-reachable server — then flip it back to a normal laptop with one command.
 
-**Why:** so you can run **agentic coding sessions on a machine you own** and drive them from your phone or another device — kick off a long Claude Code / Codex / agent run, walk away, and check in, answer its prompts, and steer it from anywhere. The box stays awake (even lid-closed), stays reachable over your private tailnet, and your sessions survive disconnects. Small, reversible, no OS wipe. Works on a spare MacBook today and a Mac mini later.
+If you have a macOS machine you want to **act like a server** — and especially a **laptop** you want to leave running headless without it going to sleep or dropping off the network — this makes it behave like one. It stays awake (even with the lid shut), stays reachable over your private tailnet, and your remote sessions survive disconnects. Small, reversible, no OS wipe. Works on a spare MacBook today and a Mac mini later.
+
+What you run the server *for* is up to you — see [Suggested setup](#suggested-setup) for the agentic-coding stack it was originally built for.
 
 ## Quick start
 
 ```sh
-git clone https://github.com/jaxondk/macbookpro-server ~/src/macbookpro-server
-cd ~/src/macbookpro-server
-scripts/setup            # installs + configures everything; prints the few steps only you can do
+git clone https://github.com/jaxondk/macsimize ~/src/macsimize
+cd ~/src/macsimize
+scripts/setup            # installs + configures everything, asks a few preference questions
 scripts/setup --dry-run  # or: see exactly what it would do, change nothing
+scripts/setup --yes      # or: take the recommended default for every prompt
 ```
 
-`setup` is turnkey: it installs and configures **Tailscale** (private address + SSH), installs **mosh** (resilient mobile sessions), enables **Remote Login**, flips the machine into server mode, and installs a boot agent that re-asserts that mode after every reboot. Anything it can't do for you (a browser login, one GUI approval, a sudo grant) it prints at the end as a numbered checklist.
+`setup` is turnkey: it installs and configures **Tailscale** (private address + SSH), installs **mosh** (resilient mobile sessions), enables **Remote Login**, asks about a couple of reboot-related preferences (below), flips the machine into server mode, and optionally installs a boot agent that re-asserts that mode after every reboot. Anything it can't do for you (a browser login, one GUI approval, a sudo grant) it prints at the end as a numbered checklist.
+
+## Expected behavior
+
+Once in server mode **on AC power**, the machine stays awake and reachable while you:
+
+- **lock the screen**, let the **display sleep / turn off**, or **close the lid** (true clamshell — no external display needed).
+
+Power and reboots:
+
+- **Plugged in (AC):** never sleeps — that's the point. All settings are applied with `pmset -c` (**AC only**).
+- **On battery (unplugged):** behaves like a normal laptop and sleeps as usual, so an unplugged laptop in a bag doesn't cook itself. The battery also acts as a built-in UPS, so a brief power blip won't drop the box (this is why a laptop makes a forgiving server; a Mac mini has no battery — see the mini playbook).
+- **After a reboot:** the box powers back on and the boot agent re-applies whichever mode you were last in (server stays server). **But** if FileVault is on, it waits at the unlock screen until someone types the password — SSH and daemons don't start until then. For a *planned* reboot that comes back reachable without a keyboard: `sudo fdesetup authrestart`.
+
+What it does **not** do: it won't keep the machine awake on battery, won't turn your display on, and won't change SSH, FileVault, or network settings beyond what you choose during setup.
+
+## Preferences you choose at setup
+
+A few things are personal-taste trade-offs between security and convenience, so `setup` asks instead of deciding for you (`--yes` takes the recommended default for each):
+
+- **Disable automatic macOS updates** *(default: yes)* — auto-installed OS updates reboot the machine, which is the main cause of a surprise reboot that then stalls at the FileVault unlock screen. Security "rapid response" updates don't reboot and stay on.
+- **FileVault** *(default: keep as-is; recommended ON for a laptop)* — ON means the disk is encrypted but a reboot needs a manual unlock; OFF means genuinely unattended reboots but an unencrypted boot disk. `setup` explains the trade-off and, because flipping it re-encrypts the whole disk, **prints the command** rather than doing it for you.
+- **Boot re-assert agent** *(default: yes)* — a user-level LaunchAgent (no sudo) that re-applies your mode after every reboot/update, so you don't drift out of server mode.
 
 ## What this repo does — and what it doesn't
 
@@ -28,9 +53,11 @@ This repo is **only about making a machine behave like a server**. It is intenti
 
 Where something straddles the line (Tailscale, mosh), this repo owns the **server-side configuration** and installs the binary if it's missing, so a clone-and-run works on a bare Mac. If your dotfiles already installed it, `setup` just detects it and moves on.
 
-## Suggested setup: a phone-driven devbox
+## Suggested setup
 
-This repo is one of three pieces. Together they turn a Mac into a devbox you run from your pocket:
+Your server can run anything — a build box, a home service, a media job. The reason this exists, though, is **agentic coding you drive from your phone**: kick off a long Claude Code / Codex / agent run on a machine you own, walk away, and check in, answer its prompts, and steer it from anywhere — sessions that survive disconnects.
+
+For that, three pieces fit together:
 
 1. **this repo** → the machine stays on and reachable.
 2. **a dotfiles repo** → your dev environment (packages, shell, editors, agents). Use something like [chezmoi](https://chezmoi.io); drive persistent sessions with a multiplexer like [herdr](https://github.com/steveyegge/herdr) or phux so agents keep running after you disconnect. Example: [github.com/jaxondk/dotfiles](https://github.com/jaxondk/dotfiles).
@@ -46,38 +73,15 @@ bin/servermode status    # what mode am I in?  (read-only, no sudo)
 
 `scripts/setup` runs the full first-time setup; `servermode` is the day-to-day toggle once reachability is configured.
 
-## Steps only you can do
-
-A few things can't be scripted safely or at all. `setup` prints these as a checklist when it finishes; in full they are:
-
-- **Log in to Tailscale** — `tailscale up --ssh --accept-dns=false` opens a browser login (and, on a fresh install, a one-time System Settings approval of its system extension).
-- **Disable key expiry** for this node in the [Tailscale admin console](https://login.tailscale.com/admin/machines) (or tag it) so a headless box never logs itself off the tailnet.
-- **Install the `pmset` grant** (one sudo prompt) if you want the toggle to run without a password — see [Usage](#usage) below.
-- **Unlock after a reboot** — with FileVault on, a reboot waits at the unlock screen until someone types the password. For a *planned* reboot that comes back ready: `sudo fdesetup authrestart`.
-- **Optional:** lock SSH to key-only (`scripts/ssh-enable-harden.sh`) — kept manual because getting it wrong can lock you out. Low-stakes since the box is tailnet-only, not public.
-
-## Usage
-
-The one optional manual step worth doing up front — let this user run `pmset` without a password, so toggling needs no prompt (`__USER__` is filled in automatically):
-
-```sh
-sed "s/__USER__/$(id -un)/" scripts/sudoers-pmset > /tmp/sm-sudoers && \
-  sudo visudo -cf /tmp/sm-sudoers && \
-  sudo install -m 0440 -o root -g wheel /tmp/sm-sudoers /etc/sudoers.d/macbookpro-server-pmset && \
-  rm -f /tmp/sm-sudoers
-```
-
-Then connect from another device over the tailnet (`ssh you@<tailscale-ip>` or the MagicDNS name, or via Moshi/Blink over mosh) and work inside your multiplexer.
-
 ## How it works
 
-Server mode, on AC power only (so an unplugged laptop still sleeps normally):
+Server mode, on AC power only:
 
 - A `pmset` profile that prevents sleep — including **lid-closed** (`disablesleep`) — keeps disk/network awake and enables power-on-after-failure.
 - A user-level `caffeinate` LaunchAgent as a second keep-awake guard (no sudo).
-- The chosen mode is recorded in `state/desired-mode`; a boot LaunchAgent re-applies *that* mode on every boot, so a reboot or a macOS update that resets `pmset` doesn't drift you out of the mode you were in — server restores server, laptop restores laptop.
+- The chosen mode is recorded in `state/desired-mode`; a boot LaunchAgent re-applies *that* mode on every boot, so a reboot or a macOS update that resets `pmset` doesn't drift you out of the mode you were in.
 
-The only privileged action is `pmset` (covered by the scoped grant above). FileVault is never changed automatically.
+The only privileged actions are `pmset` and (if you opt in) the auto-update toggle. FileVault is never changed automatically.
 
 ## Safe & reversible
 

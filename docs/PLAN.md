@@ -15,6 +15,8 @@ The full design. For how to *use* what's built, see the top-level [`README.md`](
 - **B — FileVault: stays on.** Manual unlock on the rare unexpected reboot; `fdesetup authrestart` for planned ones.
 - **C — Hosting: local Mac only.** No cloud box. Hetzner (~€4/mo) kept as a documented fallback in [§ Hosted alternatives](#hosted-alternatives) if that ever changes.
 
+These were the author's defaults, not law. The security-vs-convenience ones are personal taste, so `scripts/setup` surfaces them as **prompts** (default = the recommended choice, `--yes` to accept all): disable auto-updates (default yes), keep FileVault on (default yes — never auto-toggled, since it re-encrypts the disk), and install the boot agent (default yes). See [`lib/prefs.sh`](../lib/prefs.sh).
+
 ## Session persistence: herdr (not raw tmux)
 
 You already run **herdr** (agent-aware multiplexer; this repo was built from inside it, `HERDR_ENV=1`). It's the session layer — agents keep running when you disconnect and show per-agent state (blocked/working/done/idle). The plan references herdr as the persistence mechanism; `tmux`/`mosh` remain available as fallbacks. You may later swap to **phux** (mobile app + herdr-like server side); nothing here is coupled to herdr specifically, so a swap is just "use the other multiplexer" — the server layers are unaffected.

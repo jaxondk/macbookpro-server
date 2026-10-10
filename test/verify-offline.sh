@@ -14,7 +14,7 @@ hdr()  { printf '\n== %s ==\n' "$*"; }
 scripts=(bin/servermode scripts/bootstrap scripts/setup scripts/ssh-enable-harden.sh \
          scripts/dns-hostname-fix.sh scripts/boot-reassert.sh test/verify-offline.sh)
 libs=(lib/common.sh lib/power.sh lib/caffeinate.sh lib/reassert.sh \
-      lib/tailscale.sh lib/mosh.sh)
+      lib/tailscale.sh lib/mosh.sh lib/prefs.sh)
 
 hdr "bash syntax (-n)"
 for f in "${scripts[@]}" "${libs[@]}"; do

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Shared helpers for macbookpro-server scripts. Source, don't execute.
+# Shared helpers for macsimize scripts. Source, don't execute.
 # shellcheck shell=bash
 
 # Resolve the repo root from this file's location, regardless of CWD.
@@ -35,6 +35,21 @@ run() {
 }
 
 is_dry_run() { [ "$DRY_RUN" = "1" ]; }
+
+# ask_yn PROMPT [default:y|n] — prompt for a yes/no answer; returns 0 for yes.
+# Non-interactive (no tty) or ASSUME_YES=1 returns the default without asking,
+# so setup still runs in pipes/CI and honors a --yes flag.
+ask_yn() {
+  local prompt="$1" def="${2:-y}" ans hint
+  if [ "${ASSUME_YES:-0}" = "1" ] || [ ! -t 0 ]; then
+    [ "$def" = "y" ]; return
+  fi
+  hint="[Y/n]"; [ "$def" = "n" ] && hint="[y/N]"
+  printf '%s%s?%s %s ' "$_c_blue" "$prompt" "$_c_reset" "$hint" >&2
+  read -r ans || ans=""
+  ans="${ans:-$def}"
+  case "$ans" in [Yy]*) return 0 ;; *) return 1 ;; esac
+}
 
 need_cmd() { command -v "$1" >/dev/null 2>&1 || die "required command not found: $1"; }
 

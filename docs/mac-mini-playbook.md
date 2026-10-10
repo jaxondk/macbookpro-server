@@ -8,7 +8,7 @@ When the Mac mini arrives, it becomes the real always-on server. The whole repo 
 # 1. dev env (owned by dotfiles)
 chezmoi init --apply <your-dotfiles-repo>
 # 2. server behavior (this repo) — turnkey
-git clone <this repo> ~/src/macbookpro-server && cd ~/src/macbookpro-server
+git clone <this repo> ~/src/macsimize && cd ~/src/macsimize
 scripts/setup            # installs Tailscale + mosh, enables SSH, flips to server mode
 ```
 

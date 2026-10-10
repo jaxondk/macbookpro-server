@@ -1,4 +1,4 @@
-# macbookpro-server: let this user manage power settings without a password.
+# macsimize: let this user manage power settings without a password.
 #
 # This is a TEMPLATE. `__USER__` is replaced with your username at install time
 # (see the install command below), so nothing personal is committed here.
