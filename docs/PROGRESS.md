@@ -2,6 +2,15 @@
 
 Newest first. Issue IDs are beads (`bd show <id>`).
 
+## 2026-10-10 (turnkey) — one-command setup + reachability owned here
+
+- **New `scripts/setup`** — the single turnkey entrypoint. Installs + configures Tailscale (standalone), installs `mosh-server`, enables Remote Login, installs the boot re-asserter, flips to server mode, then prints a numbered **"steps only you can do"** checklist (Tailscale browser login, key-expiry off, the optional `pmset` grant, FileVault reboot note, optional SSH hardening). `--dry-run` supported; non-fatal per-step failures become checklist items instead of aborting.
+- **Reachability is now this repo's responsibility** (was leaning on dotfiles): new `lib/tailscale.sh` (detect/install standalone variant, `set --ssh --accept-dns=false`, status) and `lib/mosh.sh` (install `mosh-server`, status). Rationale: reachability is what makes a box a *server*; dev tools stay in dotfiles. If dotfiles already installed the binary, setup detects and skips.
+- **`servermode status`** now shows Tailscale state (host/ip) and `mosh-server` presence. **`scripts/bootstrap`** splits its checks into "dev tools (dotfiles)" vs "reachability tools (this repo installs via setup)" and points at `scripts/setup`.
+- **README** restructured: a what/why blurb (agentic coding you drive from your phone), an explicit "what this repo does / doesn't" table, a "suggested setup" section (this repo + dotfiles with herdr/phux + **Moshi** over mosh), and a "steps only you can do" section.
+- Offline harness extended to cover the new scripts/libs; **all green**. Nothing destructive run on the machine this session (new code is install/config that only acts when invoked).
+- Beads: `33o` setup, `7ko` tailscale lib, `4ll` mosh lib, `qas` status/bootstrap, `w23` README, `ojv` docs, `5eh` verify.
+
 ## 2026-10-10 (later still) — boot re-assert agent
 
 - Built **boot re-assert** (Layer 6): `servermode boot-agent install` loads a user LaunchAgent that on each boot re-applies `state/desired-mode` (written by `servermode server|laptop`). Mode-aware: server→server, laptop→laptop; no-op if unset. No sudo (uses the `pmset` grant).

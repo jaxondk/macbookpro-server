@@ -25,6 +25,10 @@ source "$SELF_DIR/../lib/power.sh"
 source "$SELF_DIR/../lib/caffeinate.sh"
 # shellcheck source=../lib/reassert.sh
 source "$SELF_DIR/../lib/reassert.sh"
+# shellcheck source=../lib/tailscale.sh
+source "$SELF_DIR/../lib/tailscale.sh"
+# shellcheck source=../lib/mosh.sh
+source "$SELF_DIR/../lib/mosh.sh"
 
 usage() {
   cat <<'EOF'
@@ -54,9 +58,10 @@ cmd_server() {
   ok "SERVER mode active."
   cmd_status
   echo
-  log "one-time steps not handled by this toggle (see docs/go-live-runbook.md):"
+  log "reachability (Tailscale / SSH / mosh) is one-time setup, not this toggle:"
+  dim "  - full turnkey setup:    scripts/setup"
   dim "  - enable + harden SSH:   scripts/ssh-enable-harden.sh"
-  dim "  - tailnet DNS/hostname:  scripts/dns-hostname-fix.sh"
+  dim "  - tailnet DNS/hostname:  scripts/dns-hostname-fix.sh (usually not needed)"
 }
 
 cmd_laptop() {
@@ -97,20 +102,14 @@ cmd_status() {
   power_status
   caffeinate_status
   reassert_status
-  # SSH (read-only; sshd registered in the system launchd domain when on).
+  # Reachability (read-only): SSH, Tailscale, mosh.
   if launchctl print system/com.openssh.sshd >/dev/null 2>&1; then
     echo "  ssh (Remote Login): ON"
   else
     echo "  ssh (Remote Login): off/unknown"
   fi
-  # Tailscale, if present.
-  local ts="/Applications/Tailscale.app/Contents/MacOS/Tailscale"
-  if [ -x "$ts" ]; then
-    local ip name
-    ip="$("$ts" ip -4 2>/dev/null | head -1)"
-    name="$(scutil --get LocalHostName 2>/dev/null || true)"
-    echo "  tailscale: up  (host '$name', ip ${ip:-unknown})"
-  fi
+  tailscale_status
+  mosh_status
 }
 
 main() {

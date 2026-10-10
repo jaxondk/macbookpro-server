@@ -19,8 +19,11 @@ log "bootstrap — host profile: $(host_profile)  ($(scutil --get LocalHostName 
 missing=0
 check() { if command -v "$1" >/dev/null 2>&1; then ok "$1"; else warn "missing: $1 (install via your chezmoi dotfiles)"; missing=1; fi; }
 
-log "prerequisite tools (provided by dotfiles, not this repo):"
-for c in git tmux mosh herdr claude; do check "$c"; done
+log "dev-environment tools (provided by your dotfiles, NOT this repo):"
+for c in git tmux herdr claude; do check "$c"; done
+
+log "reachability tools (this repo installs these via scripts/setup):"
+for c in tailscale mosh; do check "$c"; done
 
 # chezmoi applied?
 if command -v chezmoi >/dev/null 2>&1; then
@@ -43,12 +46,13 @@ if [ "$GO_SERVER" = "1" ]; then
   exec "$SELF_DIR/../bin/servermode" server
 fi
 
-[ "$missing" = "1" ] && warn "some tools missing — set up dotfiles before relying on this as a devbox."
+[ "$missing" = "1" ] && warn "some tools missing — reachability tools are installed by scripts/setup; dev tools come from your dotfiles."
 cat <<EOF
 
 Next:
-  bin/servermode server        # make this machine stay awake + load guard
-  scripts/ssh-enable-harden.sh # enable SSH (interactive)
-  scripts/dns-hostname-fix.sh  # stable tailnet hostname + TLS fix (interactive)
+  scripts/setup                # ← turnkey: Tailscale + mosh + SSH + server mode, with a next-steps summary
   bin/servermode status        # see current state anytime
+
+Or do the server-mode flip by itself (reachability already set up):
+  bin/servermode server
 EOF

@@ -24,7 +24,7 @@ You already run **herdr** (agent-aware multiplexer; this repo was built from ins
 | # | Layer | Status |
 |---|-------|--------|
 | 1 | Stay awake & resilient | ✅ built + applied + live-verified |
-| 2 | Remote access (Tailnet + SSH + DNS) | 🟡 SSH on; DNS/hostname fix staged (human-gated) |
+| 2 | Remote access (Tailscale + SSH + mosh) | ✅ scripted install + config via `scripts/setup`; browser login + key-expiry human-gated |
 | 3 | Dev environment (herdr, agents, editors) | ➡️ owned by chezmoi dotfiles |
 | 4 | Reversibility (`servermode` toggle) | ✅ built + verified both directions (dry-run) |
 | 5 | Portability (`bootstrap`, host profiles) | ✅ built; mini playbook written |
@@ -54,8 +54,11 @@ sudo pmset -c sleep 0 disksleep 0 powernap 0 womp 1 autorestart 1 disablesleep 1
 
 ### Layer 2 — Remote access over Tailnet
 
-- **SSH:** Remote Login is already **ON**. Hardening (key-only) is staged in `scripts/ssh-enable-harden.sh` — interactive, because disabling password auth wrong can lock you out; the script enables SSH and *prints* the hardening steps rather than auto-editing `sshd_config`.
-- **Tailscale:** up as host `<your-host>` / `<tailscale-ip>`. For a true server, make it an unattended node so its key doesn't expire (tag + `--ssh`), covered in the runbook.
+`scripts/setup` makes this layer turnkey: it installs Tailscale (the **standalone** variant, `io.tailscale.ipn.macsys` — runs a system daemon, unlike the sandboxed App Store build) and `mosh` if missing, configures Tailscale for server use (`--ssh`, `--accept-dns=false`), and enables Remote Login — then prints the interactive remainder (browser login, key-expiry) as a checklist. Install lives here, not in dotfiles, because reachability is what makes the box a *server* (see [`lib/tailscale.sh`](../lib/tailscale.sh), [`lib/mosh.sh`](../lib/mosh.sh)); if dotfiles already brought the binary, setup detects and skips.
+
+- **SSH:** Remote Login is enabled by `setup` (or `scripts/ssh-enable-harden.sh`). Hardening (key-only) is kept interactive, because disabling password auth wrong can lock you out; the script enables SSH and *prints* the hardening steps rather than auto-editing `sshd_config`.
+- **Tailscale:** configured with `--ssh` and `--accept-dns=false` (the TLS fix). For a true server, make it an unattended node so its key doesn't expire (disable expiry in the admin console, or tag it), covered in the runbook.
+- **mosh:** `mosh-server` is installed here so mobile clients ([Moshi](https://getmoshi.app), Blink) can use the mosh transport for resilient sessions over flaky mobile links. Carried over the tailnet, so no UDP ports to forward.
 - **DNS / the ECONNRESET bug:** your [`tailscale-claude-code-fix.md`](../../tailscale-claude-code-fix.md) shows `--accept-dns=true` breaks Claude Code TLS. `scripts/dns-hostname-fix.sh` applies the clean fix: `--accept-dns=false` **plus** `/etc/resolver/ts.net` → so you keep a stable `.ts.net` hostname *and* working TLS. Network-sensitive → human-gated, verify from a 2nd device.
 - **mosh** available for flaky mobile links; **Termius** is your phone client.
 

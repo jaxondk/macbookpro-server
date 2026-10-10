@@ -7,19 +7,12 @@ When the Mac mini arrives, it becomes the real always-on server. The whole repo 
 ```sh
 # 1. dev env (owned by dotfiles)
 chezmoi init --apply <your-dotfiles-repo>
-# 2. server behavior (this repo)
+# 2. server behavior (this repo) — turnkey
 git clone <this repo> ~/src/macbookpro-server && cd ~/src/macbookpro-server
-scripts/bootstrap            # detects profile = "desktop" (no battery)
-sed "s/__USER__/$(id -un)/" scripts/sudoers-pmset > /tmp/sm-sudoers && \
-  sudo visudo -cf /tmp/sm-sudoers && \
-  sudo install -m 0440 -o root -g wheel /tmp/sm-sudoers /etc/sudoers.d/macbookpro-server-pmset && rm -f /tmp/sm-sudoers
-bin/servermode boot-agent install   # re-assert mode on every boot
-bin/servermode server
+scripts/setup            # installs Tailscale + mosh, enables SSH, flips to server mode
 ```
 
-(`scripts/bootstrap --server` does the `boot-agent install` + `servermode server` in one step.)
-
-`host_profile()` returns **desktop** on the mini (no `InternalBattery`), so the scripts know they're on the real server.
+`scripts/setup` is the same one command as on the laptop; it installs the `mosh-server` + Tailscale (standalone) the mini needs and prints the interactive remainder (Tailscale login, key-expiry, the optional `pmset` grant). `host_profile()` returns **desktop** on the mini (no `InternalBattery`), so the scripts know they're on the real server and apply the desktop power profile.
 
 ## What's different
 

@@ -1,0 +1,144 @@
+#!/usr/bin/env bash
+# setup — turn this Mac into a reachable always-on server, end to end.
+#
+# This is the one command a new user runs. It does everything that can be done
+# safely and reversibly on its own, and clearly lists the few steps only you can
+# do (browser logins, a GUI approval, a sudo grant). Re-runnable and idempotent.
+#
+#   scripts/setup              # do it
+#   scripts/setup --dry-run    # print every action, change nothing
+#
+# What this repo owns (and this script sets up): staying awake, reachability
+# (Tailscale config, SSH, mosh-server), the reversible server/laptop toggle, and
+# a boot re-asserter. It does NOT manage your dev environment (packages, shell,
+# editors, agent config) — that's your dotfiles' job. See the README.
+#
+# DRY_RUN and the _c_* color vars are assigned in lib/common.sh, sourced below;
+# ShellCheck can't follow that dynamic source, hence the file-level disables.
+# shellcheck disable=SC2034,SC2154
+set -uo pipefail
+SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=../lib/common.sh
+source "$SELF_DIR/../lib/common.sh"
+# shellcheck source=../lib/tailscale.sh
+source "$SELF_DIR/../lib/tailscale.sh"
+# shellcheck source=../lib/mosh.sh
+source "$SELF_DIR/../lib/mosh.sh"
+
+SERVERMODE="$SELF_DIR/../bin/servermode"
+[ "${1:-}" = "--dry-run" ] && DRY_RUN=1
+
+# Steps the user must finish by hand get appended here and printed at the end.
+MANUAL=()
+manual() { MANUAL+=("$*"); }
+
+log "Turnkey server setup — host profile: $(host_profile)  ($(scutil --get LocalHostName 2>/dev/null || echo '?'))"
+is_dry_run && warn "DRY-RUN: no changes will be made"
+echo
+
+# --- 1. Tailscale (reachability) --------------------------------------------
+log "1/5  Tailscale — private, stable address to reach this box"
+fresh_ts=0
+if tailscale_is_installed; then
+  ok "already installed ($(ts_bin))"
+else
+  if is_dry_run; then
+    dim "[dry-run] would install standalone Tailscale (brew install --cask tailscale)"
+  elif tailscale_install; then
+    fresh_ts=1
+  else
+    manual "Install Tailscale (standalone) from https://tailscale.com/download/macos, then re-run scripts/setup."
+  fi
+fi
+
+if tailscale_is_installed && [ "$fresh_ts" = "0" ]; then
+  if is_dry_run; then
+    dim "[dry-run] would run: tailscale set --ssh=true --accept-dns=false"
+  elif tailscale_is_up; then
+    tailscale_configure
+    ok "Tailscale configured for server use"
+  else
+    warn "Tailscale is installed but not logged in."
+    manual "Authenticate + configure Tailscale:  $(ts_bin) up --ssh --accept-dns=false   (opens a browser login)"
+  fi
+elif [ "$fresh_ts" = "1" ]; then
+  warn "Tailscale was just installed — a one-time GUI approval is required."
+  manual "Open Tailscale.app once and approve the system extension / VPN config in System Settings, then run:  $(ts_bin) up --ssh --accept-dns=false"
+fi
+manual "In the Tailscale admin console, DISABLE key expiry for this machine (or tag it) so a headless node never logs itself off the tailnet."
+echo
+
+# --- 2. mosh-server (reachability for mobile clients) -----------------------
+log "2/5  mosh — resilient mobile sessions (Moshi, Blink, …)"
+if is_dry_run; then
+  if mosh_is_installed; then ok "mosh-server present"; else dim "[dry-run] would install mosh (brew install mosh)"; fi
+else
+  mosh_install || manual "Install mosh:  brew install mosh"
+fi
+echo
+
+# --- 3. SSH / Remote Login --------------------------------------------------
+log "3/5  SSH — enable Remote Login"
+if is_dry_run; then
+  dim "[dry-run] would run: scripts/ssh-enable-harden.sh  (enables Remote Login; prompts for sudo)"
+else
+  if launchctl print system/com.openssh.sshd >/dev/null 2>&1; then
+    ok "Remote Login already ON"
+  else
+    warn "enabling Remote Login (prompts for sudo)…"
+    "$SELF_DIR/ssh-enable-harden.sh" || manual "Enable SSH manually:  sudo systemsetup -setremotelogin on"
+  fi
+fi
+manual "Optional hardening: lock SSH to key-only (lockout risk, do it carefully):  scripts/ssh-enable-harden.sh --check  then follow its printed steps."
+echo
+
+# --- 4. Passwordless pmset grant (optional, removes sudo prompts) -----------
+log "4/5  pmset grant — let servermode toggle power without a password"
+if sudo -n pmset -g >/dev/null 2>&1; then
+  ok "passwordless pmset grant already active"
+else
+  warn "not installed — servermode will prompt for sudo without it."
+  manual "Install the scoped pmset grant (one sudo prompt, grants NOPASSWD for /usr/bin/pmset ONLY):
+    sed \"s/__USER__/\$(id -un)/\" scripts/sudoers-pmset > /tmp/sm-sudoers && \\
+      sudo visudo -cf /tmp/sm-sudoers && \\
+      sudo install -m 0440 -o root -g wheel /tmp/sm-sudoers /etc/sudoers.d/macbookpro-server-pmset && \\
+      rm -f /tmp/sm-sudoers"
+fi
+echo
+
+# --- 5. Server mode + boot re-asserter --------------------------------------
+log "5/5  Server mode — stay awake (lid-close safe) + re-assert on every boot"
+if is_dry_run; then
+  "$SERVERMODE" boot-agent install --dry-run
+  "$SERVERMODE" server --dry-run
+else
+  "$SERVERMODE" boot-agent install
+  "$SERVERMODE" server
+fi
+echo
+
+# --- Summary ----------------------------------------------------------------
+log "setup complete — current state:"
+echo
+if is_dry_run; then
+  dim "(dry-run: nothing changed)"
+else
+  "$SERVERMODE" status
+fi
+echo
+if [ "${#MANUAL[@]}" -gt 0 ]; then
+  printf '%s==> STEPS ONLY YOU CAN DO%s  (the rest is done)\n' "$_c_yellow" "$_c_reset"
+  local_i=1
+  for m in "${MANUAL[@]}"; do
+    printf '  %d. %s\n' "$local_i" "$m"
+    local_i=$((local_i + 1))
+  done
+  echo
+  dim "FileVault note: with FileVault on, a reboot stops at the unlock screen until"
+  dim "someone unlocks at the keyboard. For a planned reboot that comes back ready:"
+  dim "  sudo fdesetup authrestart"
+else
+  ok "nothing left for you to do — fully set up."
+fi
+echo
+dim "Reverse everything:  bin/servermode laptop  &&  bin/servermode boot-agent remove"
