@@ -1,0 +1,24 @@
+# macbookpro-server: let this user manage power settings without a password.
+#
+# This is a TEMPLATE. `__USER__` is replaced with your username at install time
+# (see the install command below), so nothing personal is committed here.
+#
+# WHY THIS IS SAFE: `pmset` only reads/writes power-management settings. It is
+# not an arbitrary-file-write or command-exec primitive, so NOPASSWD here does
+# not grant general root. Every change the project makes is snapshotted first
+# (state/pmset-backup.txt) and is reversible via `servermode laptop`.
+#
+# This file intentionally does NOT grant passwordless launchctl / systemsetup /
+# tee / fdesetup — those WOULD be effective root. Those steps stay interactive.
+#
+# INSTALL (run once, with your password; validated before it goes live):
+#   sed "s/__USER__/$(id -un)/" scripts/sudoers-pmset > /tmp/sm-sudoers \
+#     && sudo visudo -cf /tmp/sm-sudoers \
+#     && sudo install -m 0440 -o root -g wheel /tmp/sm-sudoers \
+#          /etc/sudoers.d/macbookpro-server-pmset \
+#     && rm -f /tmp/sm-sudoers && echo "installed + valid"
+#
+# REMOVE:
+#   sudo rm /etc/sudoers.d/macbookpro-server-pmset
+
+__USER__ ALL=(root) NOPASSWD: /usr/bin/pmset

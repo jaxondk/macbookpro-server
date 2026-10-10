@@ -1,0 +1,4 @@
+# Libraries are sourced via runtime-relative paths ($SELF_DIR/../lib/...), which
+# ShellCheck can't statically resolve. Each lib is checked on its own by the
+# offline harness, so disabling the "can't follow include" info is correct here.
+disable=SC1091

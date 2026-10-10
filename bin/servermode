@@ -1,0 +1,138 @@
+#!/usr/bin/env bash
+# servermode — flip a Mac between "server" and "laptop" behavior, reversibly.
+#
+#   servermode server [--dry-run]       stay awake, load caffeinate guard
+#   servermode laptop [--dry-run]        restore original power behavior
+#   servermode status                    show current mode (read-only, no sudo)
+#   servermode boot-agent install|remove install/remove the on-boot re-asserter
+#   servermode help
+#
+# Only the power layer and the caffeinate guard are toggled by server/laptop. SSH
+# and the Tailscale DNS fix are one-time setup (see docs/go-live-runbook.md) and
+# intentionally NOT touched. The boot-agent persists across both modes and re-
+# asserts whichever mode was last set (state/desired-mode) on each boot.
+# DRY_RUN is assigned in main() but consumed inside lib/common.sh
+# (run/is_dry_run), which ShellCheck can't see across the dynamic source.
+# shellcheck disable=SC2034
+set -euo pipefail
+
+SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=../lib/common.sh
+source "$SELF_DIR/../lib/common.sh"
+# shellcheck source=../lib/power.sh
+source "$SELF_DIR/../lib/power.sh"
+# shellcheck source=../lib/caffeinate.sh
+source "$SELF_DIR/../lib/caffeinate.sh"
+# shellcheck source=../lib/reassert.sh
+source "$SELF_DIR/../lib/reassert.sh"
+
+usage() {
+  cat <<'EOF'
+servermode — flip a Mac between "server" and "laptop" behavior, reversibly.
+
+  servermode server [--dry-run]         stay awake, load caffeinate guard
+  servermode laptop [--dry-run]         restore original power behavior
+  servermode status                     show current mode (read-only, no sudo)
+  servermode boot-agent install|remove  install/remove the on-boot re-asserter
+  servermode help
+
+server/laptop toggle only the power layer + caffeinate guard, and record the
+chosen mode. The boot-agent persists across both modes and re-asserts whichever
+mode was last set on each boot. SSH and the Tailscale DNS fix are one-time setup
+(see docs/go-live-runbook.md) and not touched here.
+EOF
+}
+
+cmd_server() {
+  need_cmd pmset
+  log "entering SERVER mode  (profile: $(host_profile))"
+  set_desired_mode server
+  snapshot_power
+  apply_server_power
+  caffeinate_install
+  echo
+  ok "SERVER mode active."
+  cmd_status
+  echo
+  log "one-time steps not handled by this toggle (see docs/go-live-runbook.md):"
+  dim "  - enable + harden SSH:   scripts/ssh-enable-harden.sh"
+  dim "  - tailnet DNS/hostname:  scripts/dns-hostname-fix.sh"
+}
+
+cmd_laptop() {
+  need_cmd pmset
+  log "entering LAPTOP mode"
+  set_desired_mode laptop
+  caffeinate_uninstall
+  restore_power || true
+  echo
+  ok "LAPTOP mode active (SSH, if enabled, is left on by design)."
+  cmd_status
+}
+
+cmd_boot_agent() {
+  case "${1:-}" in
+    install) reassert_install ;;
+    remove|uninstall) reassert_uninstall ;;
+    *) die "usage: servermode boot-agent install|remove" ;;
+  esac
+}
+
+cmd_status() {
+  # Verdict: infer mode from the two things server-mode changes.
+  local ds caff mode
+  ds="$(_read_ac_key disablesleep)"
+  if caffeinate_is_loaded; then caff=1; else caff=0; fi
+  if [ "$ds" = "1" ] && [ "$caff" = "1" ]; then
+    mode="SERVER ✅  (staying awake, lid-close safe)"
+  elif [ "$ds" != "1" ] && [ "$caff" = "0" ]; then
+    mode="LAPTOP 💤  (normal sleep behavior)"
+  else
+    mode="PARTIAL ⚠️  (disablesleep=$ds, caffeinate=$caff — run 'servermode server' or 'laptop')"
+  fi
+  echo "servermode: $mode"
+  echo
+  echo "indicators (host profile: $(host_profile)):"
+  echo "power (AC):"
+  power_status
+  caffeinate_status
+  reassert_status
+  # SSH (read-only; sshd registered in the system launchd domain when on).
+  if launchctl print system/com.openssh.sshd >/dev/null 2>&1; then
+    echo "  ssh (Remote Login): ON"
+  else
+    echo "  ssh (Remote Login): off/unknown"
+  fi
+  # Tailscale, if present.
+  local ts="/Applications/Tailscale.app/Contents/MacOS/Tailscale"
+  if [ -x "$ts" ]; then
+    local ip name
+    ip="$("$ts" ip -4 2>/dev/null | head -1)"
+    name="$(scutil --get LocalHostName 2>/dev/null || true)"
+    echo "  tailscale: up  (host '$name', ip ${ip:-unknown})"
+  fi
+}
+
+main() {
+  local sub="${1:-help}"; shift || true
+  # Separate --dry-run from positional subargs (e.g. `boot-agent install`).
+  local rest=()
+  for arg in "$@"; do
+    case "$arg" in
+      --dry-run) DRY_RUN=1 ;;
+      -*) die "unknown flag: $arg" ;;
+      *) rest+=("$arg") ;;
+    esac
+  done
+  is_dry_run && warn "DRY-RUN: no changes will be made"
+  case "$sub" in
+    server) cmd_server ;;
+    laptop) cmd_laptop ;;
+    status) cmd_status ;;
+    boot-agent) cmd_boot_agent "${rest[@]:-}" ;;
+    help|-h|--help) usage ;;
+    *) err "unknown command: $sub"; echo; usage; exit 2 ;;
+  esac
+}
+
+main "$@"

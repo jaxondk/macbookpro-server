@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# bootstrap — stand up server behavior on a fresh Mac (laptop or mini).
+#
+# This repo owns ONLY server behavior. Your dev environment (packages, shell,
+# agentic config) is owned by your chezmoi dotfiles — run `chezmoi apply` first.
+# bootstrap checks prerequisites, then points you at `servermode server`.
+#
+#   scripts/bootstrap            # check prerequisites + print next step
+#   scripts/bootstrap --server   # also flip into server mode now
+set -euo pipefail
+SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=../lib/common.sh
+source "$SELF_DIR/../lib/common.sh"
+
+GO_SERVER=0; [ "${1:-}" = "--server" ] && GO_SERVER=1
+
+log "bootstrap — host profile: $(host_profile)  ($(scutil --get LocalHostName 2>/dev/null || echo '?'))"
+
+missing=0
+check() { if command -v "$1" >/dev/null 2>&1; then ok "$1"; else warn "missing: $1 (install via your chezmoi dotfiles)"; missing=1; fi; }
+
+log "prerequisite tools (provided by dotfiles, not this repo):"
+for c in git tmux mosh herdr claude; do check "$c"; done
+
+# chezmoi applied?
+if command -v chezmoi >/dev/null 2>&1; then
+  ok "chezmoi present"
+else
+  warn "chezmoi not found — run your dotfiles install first (dev env won't be set up)."
+fi
+
+# passwordless pmset?
+if sudo -n pmset -g >/dev/null 2>&1; then
+  ok "passwordless pmset grant active"
+else
+  warn "no passwordless pmset — install scripts/sudoers-pmset, or servermode will prompt for sudo."
+fi
+
+echo
+if [ "$GO_SERVER" = "1" ]; then
+  log "installing boot re-assert agent + flipping into server mode..."
+  "$SELF_DIR/../bin/servermode" boot-agent install
+  exec "$SELF_DIR/../bin/servermode" server
+fi
+
+[ "$missing" = "1" ] && warn "some tools missing — set up dotfiles before relying on this as a devbox."
+cat <<EOF
+
+Next:
+  bin/servermode server        # make this machine stay awake + load guard
+  scripts/ssh-enable-harden.sh # enable SSH (interactive)
+  scripts/dns-hostname-fix.sh  # stable tailnet hostname + TLS fix (interactive)
+  bin/servermode status        # see current state anytime
+EOF
