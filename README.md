@@ -55,13 +55,13 @@ Where something straddles the line (Tailscale, mosh), this repo owns the **serve
 
 ## Suggested setup
 
-Your server can run anything — a build box, a home service, a media job. The reason this exists, though, is **agentic coding you drive from your phone**: kick off a long Claude Code / Codex / agent run on a machine you own, walk away, and check in, answer its prompts, and steer it from anywhere — sessions that survive disconnects.
+Your server can run anything — a build box, a home service, a media job. My main use case in this setup, though, is **agentic coding you drive from your phone**: kick off a long Claude Code / Codex / agent run on a machine you own, walk away, and check in, answer its prompts, and steer it from anywhere — sessions that survive disconnects.
 
 For that, three pieces fit together:
 
 1. **this repo** → the machine stays on and reachable.
 2. **a dotfiles repo** → your dev environment (packages, shell, editors, agents). Use something like [chezmoi](https://chezmoi.io); drive persistent sessions with a multiplexer like [herdr](https://github.com/steveyegge/herdr) or phux so agents keep running after you disconnect. Example: [github.com/jaxondk/dotfiles](https://github.com/jaxondk/dotfiles).
-3. **a mobile client** → [**Moshi**](https://getmoshi.app) ([App Store](https://apps.apple.com/app/id6757859949)) is purpose-built for this: a phone terminal for long-running coding agents on your own machine, with an approvals inbox and push notifications. It connects over the tailnet using the **mosh** transport this repo installs. (Any mosh/SSH client works — e.g. [Blink](https://blink.sh) — Moshi is just the most on-point for agent workflows. If you use Moshi's agent inbox, also install its `moshi-hook` on the host per [their docs](https://getmoshi.app/docs/introduction).)
+3. **a mobile client** → [**Moshi**](https://getmoshi.app) ([App Store](https://apps.apple.com/app/id6757859949)) is purpose-built for this: a phone terminal for long-running coding agents on your own machine, with an approvals inbox and push notifications. It connects over the tailnet using the **mosh** transport this repo installs. (Any mosh/SSH client works — e.g. [Blink](https://blink.sh) — Moshi is just the most on-point for agent workflows. If you use Moshi's agent inbox, also install its `moshi-hook` on the host per [their docs](https://getmoshi.app/docs/introduction).).
 
 ## Commands
 
@@ -88,6 +88,7 @@ The only privileged actions are `pmset` and (if you opt in) the auto-update togg
 - Your original power settings are snapshotted before any change; `bin/macsimize laptop` restores them exactly.
 - Every script has a `--dry-run` (prints commands, changes nothing) and a read-only `status` / `--check`.
 - To undo everything:
+
   ```sh
   bin/macsimize laptop
   bin/macsimize boot-agent remove
