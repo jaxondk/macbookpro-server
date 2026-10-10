@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Tailscale: install (standalone, headless-friendly) + configure for server use.
-# Sourced by scripts/setup and bin/servermode (which source common.sh first).
+# Sourced by bin/macsimize (which source common.sh first).
 #
 # WHY THIS LIVES HERE: Tailscale is the *reachability* layer — it's what makes
 # the box reachable as a server. So this repo owns its server-side configuration
@@ -61,7 +61,7 @@ tailscale_configure() {
   run "$b" set --ssh=true --accept-dns=false
 }
 
-# One read-only line for `servermode status` / setup summaries.
+# One read-only line for `macsimize status` / setup summaries.
 tailscale_status() {
   local b; if ! b="$(ts_bin)"; then echo "  tailscale: not installed"; return; fi
   local state ip name

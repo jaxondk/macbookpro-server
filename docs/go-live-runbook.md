@@ -5,7 +5,7 @@ Server mode (stay-awake + caffeinate guard) is already applied and verified. The
 ## 0. Prereqs (already true)
 
 - Passwordless `pmset` grant installed (`scripts/sudoers-pmset` → `/etc/sudoers.d/…`). ✅
-- `bin/servermode status` shows `disablesleep 1`, caffeinate loaded, SSH on, Tailscale up. ✅
+- `bin/macsimize status` shows `disablesleep 1`, caffeinate loaded, SSH on, Tailscale up. ✅
 
 ## 1. Verify "stays awake with the lid closed" (needs a 2nd device)
 
@@ -18,7 +18,7 @@ This is the one Layer-1 check that can't be scripted headlessly.
 2. **Close the laptop lid.** Wait ~2 minutes.
 3. From the other device, run the same SSH again. It should still answer.
    - If it does: clamshell-headless works. 🎉
-   - If it doesn't: the Mac slept. Re-open, run `bin/servermode status`, and check `pmset -g | grep SleepDisabled` is `1`. (Some Macs also need "Prevent automatic sleeping when the display is off" toggled — but `disablesleep 1` normally supersedes it.)
+   - If it doesn't: the Mac slept. Re-open, run `bin/macsimize status`, and check `pmset -g | grep SleepDisabled` is `1`. (Some Macs also need "Prevent automatic sleeping when the display is off" toggled — but `disablesleep 1` normally supersedes it.)
 
 ## 2. SSH hardening (interactive sudo)
 
@@ -67,8 +67,8 @@ For an *unexpected* reboot (power yank), expect to unlock at the keyboard once. 
 ## 6. Flip back whenever you want
 
 ```sh
-bin/servermode laptop              # restores exact pre-server power settings, unloads guard
-bin/servermode status              # confirm
+bin/macsimize laptop              # restores exact pre-server power settings, unloads guard
+bin/macsimize status              # confirm
 ```
 
-Running `servermode laptop` does **not** turn SSH off (by design — harmless behind Tailscale). Turn it off manually if you want: `sudo systemsetup -setremotelogin off`.
+Running `macsimize laptop` does **not** turn SSH off (by design — harmless behind Tailscale). Turn it off manually if you want: `sudo systemsetup -setremotelogin off`.

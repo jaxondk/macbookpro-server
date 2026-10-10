@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
-# servermode — flip a Mac between "server" and "laptop" behavior, reversibly.
+# macsimize — make a Mac behave like an always-on server, reversibly.
 #
-#   servermode server [--dry-run]       stay awake, load caffeinate guard
-#   servermode laptop [--dry-run]        restore original power behavior
-#   servermode status                    show current mode (read-only, no sudo)
-#   servermode boot-agent install|remove install/remove the on-boot re-asserter
-#   servermode help
+#   macsimize setup [--yes] [--dry-run]  full first-time setup (reachability + mode)
+#   macsimize server [--dry-run]         stay awake, load caffeinate guard
+#   macsimize laptop [--dry-run]         restore original power behavior
+#   macsimize status                     show current mode (read-only, no sudo)
+#   macsimize boot-agent install|remove  install/remove the on-boot re-asserter
+#   macsimize help
 #
-# Only the power layer and the caffeinate guard are toggled by server/laptop. SSH
-# and the Tailscale DNS fix are one-time setup (see docs/go-live-runbook.md) and
-# intentionally NOT touched. The boot-agent persists across both modes and re-
-# asserts whichever mode was last set (state/desired-mode) on each boot.
+# `setup` is the turnkey entrypoint; server/laptop are the day-to-day toggle.
+# The toggle changes only the power layer + the caffeinate guard and records the
+# chosen mode; the boot-agent persists across both modes and re-asserts whichever
+# mode was last set (state/desired-mode) on each boot.
 # DRY_RUN is assigned in main() but consumed inside lib/common.sh
 # (run/is_dry_run), which ShellCheck can't see across the dynamic source.
 # shellcheck disable=SC2034
@@ -29,21 +30,26 @@ source "$SELF_DIR/../lib/reassert.sh"
 source "$SELF_DIR/../lib/tailscale.sh"
 # shellcheck source=../lib/mosh.sh
 source "$SELF_DIR/../lib/mosh.sh"
+# shellcheck source=../lib/prefs.sh
+source "$SELF_DIR/../lib/prefs.sh"
+# shellcheck source=../lib/setup.sh
+source "$SELF_DIR/../lib/setup.sh"
 
 usage() {
   cat <<'EOF'
-servermode — flip a Mac between "server" and "laptop" behavior, reversibly.
+macsimize — make a Mac behave like an always-on server, reversibly.
 
-  servermode server [--dry-run]         stay awake, load caffeinate guard
-  servermode laptop [--dry-run]         restore original power behavior
-  servermode status                     show current mode (read-only, no sudo)
-  servermode boot-agent install|remove  install/remove the on-boot re-asserter
-  servermode help
+  macsimize setup [--yes] [--dry-run]   full first-time setup (reachability + mode)
+  macsimize server [--dry-run]          stay awake, load caffeinate guard
+  macsimize laptop [--dry-run]          restore original power behavior
+  macsimize status                      show current mode (read-only, no sudo)
+  macsimize boot-agent install|remove   install/remove the on-boot re-asserter
+  macsimize help
 
-server/laptop toggle only the power layer + caffeinate guard, and record the
-chosen mode. The boot-agent persists across both modes and re-asserts whichever
-mode was last set on each boot. SSH and the Tailscale DNS fix are one-time setup
-(see docs/go-live-runbook.md) and not touched here.
+`setup` installs + configures reachability (Tailscale, SSH, mosh), asks about a
+couple of reboot preferences, and flips into server mode. server/laptop are the
+day-to-day toggle: they change only the power layer + caffeinate guard and record
+the chosen mode, which the boot-agent re-asserts on each boot.
 EOF
 }
 
@@ -59,7 +65,7 @@ cmd_server() {
   cmd_status
   echo
   log "reachability (Tailscale / SSH / mosh) is one-time setup, not this toggle:"
-  dim "  - full turnkey setup:    scripts/setup"
+  dim "  - full turnkey setup:    bin/macsimize setup"
   dim "  - enable + harden SSH:   scripts/ssh-enable-harden.sh"
   dim "  - tailnet DNS/hostname:  scripts/dns-hostname-fix.sh (usually not needed)"
 }
@@ -79,7 +85,7 @@ cmd_boot_agent() {
   case "${1:-}" in
     install) reassert_install ;;
     remove|uninstall) reassert_uninstall ;;
-    *) die "usage: servermode boot-agent install|remove" ;;
+    *) die "usage: macsimize boot-agent install|remove" ;;
   esac
 }
 
@@ -93,9 +99,9 @@ cmd_status() {
   elif [ "$ds" != "1" ] && [ "$caff" = "0" ]; then
     mode="LAPTOP 💤  (normal sleep behavior)"
   else
-    mode="PARTIAL ⚠️  (disablesleep=$ds, caffeinate=$caff — run 'servermode server' or 'laptop')"
+    mode="PARTIAL ⚠️  (disablesleep=$ds, caffeinate=$caff — run 'macsimize server' or 'laptop')"
   fi
-  echo "servermode: $mode"
+  echo "macsimize: $mode"
   echo
   echo "indicators (host profile: $(host_profile)):"
   echo "power (AC):"
@@ -114,17 +120,19 @@ cmd_status() {
 
 main() {
   local sub="${1:-help}"; shift || true
-  # Separate --dry-run from positional subargs (e.g. `boot-agent install`).
+  # Collect subargs; pull out --dry-run globally. `setup` parses its own flags
+  # (e.g. --yes), so pass everything else through to it untouched.
   local rest=()
   for arg in "$@"; do
     case "$arg" in
       --dry-run) DRY_RUN=1 ;;
-      -*) die "unknown flag: $arg" ;;
       *) rest+=("$arg") ;;
     esac
   done
-  is_dry_run && warn "DRY-RUN: no changes will be made"
+  # setup prints its own dry-run banner; the toggle commands announce it here.
+  if [ "$sub" != "setup" ]; then is_dry_run && warn "DRY-RUN: no changes will be made"; fi
   case "$sub" in
+    setup) cmd_setup "${rest[@]:-}" ;;
     server) cmd_server ;;
     laptop) cmd_laptop ;;
     status) cmd_status ;;

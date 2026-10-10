@@ -64,7 +64,7 @@ host_profile() {
 
 ensure_state_dir() { mkdir -p "$STATE_DIR"; }
 
-# Desired mode: which mode to re-assert on boot. Written by `servermode
+# Desired mode: which mode to re-assert on boot. Written by `macsimize
 # server|laptop`, read by the boot re-assert agent. Absent => do nothing on boot.
 DESIRED_MODE_FILE="$STATE_DIR/desired-mode"
 set_desired_mode() {

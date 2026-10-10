@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # mosh: install the server side so mobile clients can use the mosh transport.
-# Sourced by scripts/setup and bin/servermode (which source common.sh first).
+# Sourced by bin/macsimize (which source common.sh first).
 #
 # WHY THIS LIVES HERE: mosh is a *reachability* concern — mobile clients like
 # Moshi (getmoshi.app) or Blink use mosh to survive flaky links and IP changes
@@ -24,11 +24,11 @@ mosh_install() {
   return 1
 }
 
-# One read-only line for `servermode status` / setup summaries.
+# One read-only line for `macsimize status` / setup summaries.
 mosh_status() {
   if mosh_is_installed; then
     echo "  mosh-server: present (mobile clients can use the mosh transport)"
   else
-    echo "  mosh-server: not installed (run scripts/setup, or: brew install mosh)"
+    echo "  mosh-server: not installed (run bin/macsimize setup, or: brew install mosh)"
   fi
 }

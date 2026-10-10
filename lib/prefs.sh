@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # System-preference decisions offered at setup time. These are matters of taste
-# (security vs. convenience), so scripts/setup ASKS rather than imposing them.
+# (security vs. convenience), so bin/macsimize setup ASKS rather than imposing them.
 # Sourced after lib/common.sh.
 # shellcheck shell=bash
 

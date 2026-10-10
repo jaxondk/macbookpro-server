@@ -4,7 +4,7 @@
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>com.macbookpro-server.caffeinate</string>
+  <string>com.macsimize.caffeinate</string>
 
   <!-- `caffeinate -s` asserts "prevent system sleep", but ONLY while on AC
        power. On battery the assertion is not held, so an unplugged laptop in
@@ -25,8 +25,8 @@
   <true/>
 
   <key>StandardOutPath</key>
-  <string>/tmp/servermode-caffeinate.log</string>
+  <string>/tmp/macsimize-caffeinate.log</string>
   <key>StandardErrorPath</key>
-  <string>/tmp/servermode-caffeinate.log</string>
+  <string>/tmp/macsimize-caffeinate.log</string>
 </dict>
 </plist>

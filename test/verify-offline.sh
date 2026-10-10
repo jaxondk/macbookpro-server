@@ -11,10 +11,10 @@ pass() { printf '  PASS  %s\n' "$*"; }
 bad()  { printf '  FAIL  %s\n' "$*"; fail=1; }
 hdr()  { printf '\n== %s ==\n' "$*"; }
 
-scripts=(bin/servermode scripts/bootstrap scripts/setup scripts/ssh-enable-harden.sh \
+scripts=(bin/macsimize scripts/bootstrap scripts/ssh-enable-harden.sh \
          scripts/dns-hostname-fix.sh scripts/boot-reassert.sh test/verify-offline.sh)
 libs=(lib/common.sh lib/power.sh lib/caffeinate.sh lib/reassert.sh \
-      lib/tailscale.sh lib/mosh.sh lib/prefs.sh)
+      lib/tailscale.sh lib/mosh.sh lib/prefs.sh lib/setup.sh)
 
 hdr "bash syntax (-n)"
 for f in "${scripts[@]}" "${libs[@]}"; do
@@ -34,13 +34,13 @@ fi
 hdr "plist lint"
 if plutil -lint launchd/*.plist >/dev/null 2>&1; then pass "launchd/*.plist"; else bad "plist invalid"; fi
 
-hdr "servermode status (read-only)"
-if bin/servermode status >/dev/null 2>&1; then pass "status runs"; else bad "status errored"; fi
+hdr "macsimize status (read-only)"
+if bin/macsimize status >/dev/null 2>&1; then pass "status runs"; else bad "status errored"; fi
 
-hdr "dry-run server + laptop (no changes)"
-if bin/servermode server --dry-run >/dev/null 2>&1; then pass "server --dry-run"; else bad "server --dry-run"; fi
-if bin/servermode laptop --dry-run >/dev/null 2>&1; then pass "laptop --dry-run"; else bad "laptop --dry-run"; fi
-if scripts/setup --dry-run >/dev/null 2>&1; then pass "setup --dry-run"; else bad "setup --dry-run"; fi
+hdr "dry-run setup + server + laptop (no changes)"
+if bin/macsimize server --dry-run >/dev/null 2>&1; then pass "server --dry-run"; else bad "server --dry-run"; fi
+if bin/macsimize laptop --dry-run >/dev/null 2>&1; then pass "laptop --dry-run"; else bad "laptop --dry-run"; fi
+if bin/macsimize setup --dry-run >/dev/null 2>&1; then pass "setup --dry-run"; else bad "setup --dry-run"; fi
 
 hdr "power snapshot round-trip (read-only, temp state dir)"
 # Exercise snapshot_power for real against a throwaway STATE_DIR; it only READS

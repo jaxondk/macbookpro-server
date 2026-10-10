@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Power-management profile: snapshot, apply server settings, restore.
-# Sourced by bin/servermode (which sources common.sh first).
+# Sourced by bin/macsimize (which sources common.sh first).
 # shellcheck shell=bash
 
 POWER_SNAPSHOT_RAW="$STATE_DIR/pmset-backup.txt"   # human-readable full dump

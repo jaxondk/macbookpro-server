@@ -4,15 +4,15 @@
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>com.macbookpro-server.boot-reassert</string>
+  <string>com.macsimize.boot-reassert</string>
 
   <!-- On each login/boot, re-assert whichever mode was last set (state/desired-mode).
        Insurance in case a macOS update or anything else reset the pmset profile.
-       __SERVERMODE_REPO__ is replaced with the repo path at install time. -->
+       __MACSIMIZE_REPO__ is replaced with the repo path at install time. -->
   <key>ProgramArguments</key>
   <array>
     <string>/bin/bash</string>
-    <string>__SERVERMODE_REPO__/scripts/boot-reassert.sh</string>
+    <string>__MACSIMIZE_REPO__/scripts/boot-reassert.sh</string>
   </array>
 
   <key>RunAtLoad</key>
@@ -22,8 +22,8 @@
   <false/>
 
   <key>StandardOutPath</key>
-  <string>/tmp/servermode-boot-reassert.log</string>
+  <string>/tmp/macsimize-boot-reassert.log</string>
   <key>StandardErrorPath</key>
-  <string>/tmp/servermode-boot-reassert.log</string>
+  <string>/tmp/macsimize-boot-reassert.log</string>
 </dict>
 </plist>

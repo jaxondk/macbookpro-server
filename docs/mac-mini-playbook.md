@@ -9,10 +9,10 @@ When the Mac mini arrives, it becomes the real always-on server. The whole repo 
 chezmoi init --apply <your-dotfiles-repo>
 # 2. server behavior (this repo) — turnkey
 git clone <this repo> ~/src/macsimize && cd ~/src/macsimize
-scripts/setup            # installs Tailscale + mosh, enables SSH, flips to server mode
+bin/macsimize setup            # installs Tailscale + mosh, enables SSH, flips to server mode
 ```
 
-`scripts/setup` is the same one command as on the laptop; it installs the `mosh-server` + Tailscale (standalone) the mini needs and prints the interactive remainder (Tailscale login, key-expiry, the optional `pmset` grant). `host_profile()` returns **desktop** on the mini (no `InternalBattery`), so the scripts know they're on the real server and apply the desktop power profile.
+`bin/macsimize setup` is the same one command as on the laptop; it installs the `mosh-server` + Tailscale (standalone) the mini needs and prints the interactive remainder (Tailscale login, key-expiry, the optional `pmset` grant). `host_profile()` returns **desktop** on the mini (no `InternalBattery`), so the scripts know they're on the real server and apply the desktop power profile.
 
 ## What's different
 

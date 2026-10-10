@@ -1,15 +1,21 @@
 #!/usr/bin/env bash
 # Manage the caffeinate LaunchAgent (user-level, NO sudo required).
-# Sourced by bin/servermode.
+# Sourced by bin/macsimize.
 # shellcheck shell=bash
 
-CAFF_LABEL="com.macbookpro-server.caffeinate"
+CAFF_LABEL="com.macsimize.caffeinate"
+CAFF_LABEL_OLD="com.macbookpro-server.caffeinate"   # pre-rename; migrated away on install
 CAFF_SRC="$REPO_ROOT/launchd/$CAFF_LABEL.plist"
 CAFF_DEST="$HOME/Library/LaunchAgents/$CAFF_LABEL.plist"
 
 caffeinate_install() {
   log "installing caffeinate LaunchAgent (user-level, no sudo)"
   run mkdir -p "$HOME/Library/LaunchAgents"
+  # Migrate away from the pre-rename label if it's still around.
+  if ! is_dry_run; then
+    launchctl bootout "gui/$(id -u)/$CAFF_LABEL_OLD" >/dev/null 2>&1 || true
+    rm -f "$HOME/Library/LaunchAgents/$CAFF_LABEL_OLD.plist"
+  fi
   run cp "$CAFF_SRC" "$CAFF_DEST"
   # bootout first in case it's already loaded (ignore failure), then bootstrap.
   if is_dry_run; then
@@ -37,7 +43,8 @@ caffeinate_uninstall() {
   fi
   launchctl bootout "gui/$(id -u)/$CAFF_LABEL" >/dev/null 2>&1 \
     || launchctl unload "$CAFF_DEST" >/dev/null 2>&1 || true
-  rm -f "$CAFF_DEST"
+  launchctl bootout "gui/$(id -u)/$CAFF_LABEL_OLD" >/dev/null 2>&1 || true
+  rm -f "$CAFF_DEST" "$HOME/Library/LaunchAgents/$CAFF_LABEL_OLD.plist"
   ok "caffeinate agent removed"
 }
 

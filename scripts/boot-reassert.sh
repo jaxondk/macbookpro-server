@@ -11,7 +11,7 @@ ts="$(date '+%Y-%m-%d %H:%M:%S')"
 case "$mode" in
   server|laptop)
     echo "[$ts] boot-reassert: re-asserting '$mode' mode"
-    exec "$SELF_DIR/../bin/servermode" "$mode"
+    exec "$SELF_DIR/../bin/macsimize" "$mode"
     ;;
   "")
     echo "[$ts] boot-reassert: no desired mode recorded — doing nothing"

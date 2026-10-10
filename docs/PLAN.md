@@ -7,7 +7,7 @@ The full design. For how to *use* what's built, see the top-level [`README.md`](
 - **Primary:** this MacBook Pro acts like an always-on server. Connect from phone / iPad / other laptop over the tailnet (Termius, etc.) and drive agentic coding sessions that survive disconnects.
 - **Portable:** when the Mac mini arrives, clone this repo, run one script, server. Nothing hand-done that isn't captured here.
 - **Reversible:** one command flips this laptop into "server mode" and another restores "laptop mode". No OS wipe; macOS stays macOS.
-- **Out of scope:** dev-environment config (packages, shell, git, agentic tooling) is owned by your chezmoi [`~/dotfiles`](../../dotfiles) repo (canonical branch `chezmoi-migration`). This repo never duplicates a Brewfile or dotfile. On a new machine `chezmoi apply` does the dev env; this repo's `servermode` does the server behavior.
+- **Out of scope:** dev-environment config (packages, shell, git, agentic tooling) is owned by your chezmoi [`~/dotfiles`](../../dotfiles) repo (canonical branch `chezmoi-migration`). This repo never duplicates a Brewfile or dotfile. On a new machine `chezmoi apply` does the dev env; this repo's `macsimize` does the server behavior.
 
 ## Decisions (made)
 
@@ -15,7 +15,7 @@ The full design. For how to *use* what's built, see the top-level [`README.md`](
 - **B — FileVault: stays on.** Manual unlock on the rare unexpected reboot; `fdesetup authrestart` for planned ones.
 - **C — Hosting: local Mac only.** No cloud box. Hetzner (~€4/mo) kept as a documented fallback in [§ Hosted alternatives](#hosted-alternatives) if that ever changes.
 
-These were the author's defaults, not law. The security-vs-convenience ones are personal taste, so `scripts/setup` surfaces them as **prompts** (default = the recommended choice, `--yes` to accept all): disable auto-updates (default yes), keep FileVault on (default yes — never auto-toggled, since it re-encrypts the disk), and install the boot agent (default yes). See [`lib/prefs.sh`](../lib/prefs.sh).
+These were the author's defaults, not law. The security-vs-convenience ones are personal taste, so `bin/macsimize setup` surfaces them as **prompts** (default = the recommended choice, `--yes` to accept all): disable auto-updates (default yes), keep FileVault on (default yes — never auto-toggled, since it re-encrypts the disk), and install the boot agent (default yes). See [`lib/prefs.sh`](../lib/prefs.sh).
 
 ## Session persistence: herdr (not raw tmux)
 
@@ -26,9 +26,9 @@ You already run **herdr** (agent-aware multiplexer; this repo was built from ins
 | # | Layer | Status |
 |---|-------|--------|
 | 1 | Stay awake & resilient | ✅ built + applied + live-verified |
-| 2 | Remote access (Tailscale + SSH + mosh) | ✅ scripted install + config via `scripts/setup`; browser login + key-expiry human-gated |
+| 2 | Remote access (Tailscale + SSH + mosh) | ✅ scripted install + config via `bin/macsimize setup`; browser login + key-expiry human-gated |
 | 3 | Dev environment (herdr, agents, editors) | ➡️ owned by chezmoi dotfiles |
-| 4 | Reversibility (`servermode` toggle) | ✅ built + verified both directions (dry-run) |
+| 4 | Reversibility (`macsimize` toggle) | ✅ built + verified both directions (dry-run) |
 | 5 | Portability (`bootstrap`, host profiles) | ✅ built; mini playbook written |
 | 6 | Nice-to-haves (boot re-assert done; notifications/extra hardening later) | 🟡 partial |
 
@@ -44,11 +44,11 @@ sudo pmset -c sleep 0 disksleep 0 powernap 0 womp 1 autorestart 1 disablesleep 1
 - `autorestart 1` is a no-op on this laptop (not reported) but matters on the mini.
 - A `caffeinate -s` **LaunchAgent** (user-level, no sudo) is the belt-and-suspenders guard; `-s` only asserts on AC, so battery behavior is untouched.
 
-**Implemented by:** `bin/servermode server` / `laptop` (snapshots originals to `state/pmset-restore.env` before first change; restore is exact).
+**Implemented by:** `bin/macsimize server` / `laptop` (snapshots originals to `state/pmset-restore.env` before first change; restore is exact).
 
 **Verification (automatable, done):**
 - `test/verify-offline.sh` — dry-run both directions, snapshot round-trip, shellcheck, plist lint.
-- Live: `pmset -g | grep SleepDisabled` → `1`; `pmset -g assertions | grep PreventUserIdleSystemSleep`; `launchctl print gui/$(id -u)/com.macbookpro-server.caffeinate` → running. **All confirmed.**
+- Live: `pmset -g | grep SleepDisabled` → `1`; `pmset -g assertions | grep PreventUserIdleSystemSleep`; `launchctl print gui/$(id -u)/com.macsimize.caffeinate` → running. **All confirmed.**
 
 **Verification (needs you / a 2nd device):** close the lid and confirm the box stays reachable over the tailnet (`ssh`/ping) — inherently can't be tested headless-by-script. In [go-live-runbook](go-live-runbook.md).
 
@@ -56,7 +56,7 @@ sudo pmset -c sleep 0 disksleep 0 powernap 0 womp 1 autorestart 1 disablesleep 1
 
 ### Layer 2 — Remote access over Tailnet
 
-`scripts/setup` makes this layer turnkey: it installs Tailscale (the **standalone** variant, `io.tailscale.ipn.macsys` — runs a system daemon, unlike the sandboxed App Store build) and `mosh` if missing, configures Tailscale for server use (`--ssh`, `--accept-dns=false`), and enables Remote Login — then prints the interactive remainder (browser login, key-expiry) as a checklist. Install lives here, not in dotfiles, because reachability is what makes the box a *server* (see [`lib/tailscale.sh`](../lib/tailscale.sh), [`lib/mosh.sh`](../lib/mosh.sh)); if dotfiles already brought the binary, setup detects and skips.
+`bin/macsimize setup` makes this layer turnkey: it installs Tailscale (the **standalone** variant, `io.tailscale.ipn.macsys` — runs a system daemon, unlike the sandboxed App Store build) and `mosh` if missing, configures Tailscale for server use (`--ssh`, `--accept-dns=false`), and enables Remote Login — then prints the interactive remainder (browser login, key-expiry) as a checklist. Install lives here, not in dotfiles, because reachability is what makes the box a *server* (see [`lib/tailscale.sh`](../lib/tailscale.sh), [`lib/mosh.sh`](../lib/mosh.sh)); if dotfiles already brought the binary, setup detects and skips.
 
 - **SSH:** Remote Login is enabled by `setup` (or `scripts/ssh-enable-harden.sh`). Hardening (key-only) is kept interactive, because disabling password auth wrong can lock you out; the script enables SSH and *prints* the hardening steps rather than auto-editing `sshd_config`.
 - **Tailscale:** configured with `--ssh` and `--accept-dns=false` (the TLS fix). For a true server, make it an unattended node so its key doesn't expire (disable expiry in the admin console, or tag it), covered in the runbook.
@@ -70,7 +70,7 @@ Out of scope here. `bootstrap` only *checks* that `herdr`, `git`, `claude`, etc.
 
 ### Layer 4 — Reversibility (the toggle)
 
-`bin/servermode server|laptop|status [--dry-run]`:
+`bin/macsimize server|laptop|status [--dry-run]`:
 - **server** — snapshot (once) → apply AC power profile → load caffeinate agent → print status.
 - **laptop** — unload caffeinate agent → restore the snapshot exactly → print status.
 - **status** — read-only, no sudo; shows power keys, caffeinate, SSH, Tailscale.
@@ -83,7 +83,7 @@ Design rules: idempotent, snapshot-before-change, `--dry-run` prints every comma
 
 ### Layer 6 — Nice-to-haves
 
-- **Boot re-assert (done).** `servermode boot-agent install` sets up a user LaunchAgent that, on every login/boot, re-applies whichever mode was last set (`state/desired-mode`): server restores server, laptop restores laptop. Insurance against macOS updates silently resetting `pmset`. No sudo (uses the existing `pmset` grant). Both directions verified live.
+- **Boot re-assert (done).** `macsimize boot-agent install` sets up a user LaunchAgent that, on every login/boot, re-applies whichever mode was last set (`state/desired-mode`): server restores server, laptop restores laptop. Insurance against macOS updates silently resetting `pmset`. No sudo (uses the existing `pmset` grant). Both directions verified live.
 - **Still optional/later:** agent push notifications (ntfy/Pushover or a Claude Code `Stop` hook); SSH key-only + Tailscale ACLs; Time Machine/NAS backup.
 
 ## Hosted alternatives

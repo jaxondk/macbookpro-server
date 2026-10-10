@@ -11,12 +11,12 @@ What you run the server *for* is up to you — see [Suggested setup](#suggested-
 ```sh
 git clone https://github.com/jaxondk/macsimize ~/src/macsimize
 cd ~/src/macsimize
-scripts/setup            # installs + configures everything, asks a few preference questions
-scripts/setup --dry-run  # or: see exactly what it would do, change nothing
-scripts/setup --yes      # or: take the recommended default for every prompt
+bin/macsimize setup            # installs + configures everything, asks a few preference questions
+bin/macsimize setup --dry-run  # or: see exactly what it would do, change nothing
+bin/macsimize setup --yes      # or: take the recommended default for every prompt
 ```
 
-`setup` is turnkey: it installs and configures **Tailscale** (private address + SSH), installs **mosh** (resilient mobile sessions), enables **Remote Login**, asks about a couple of reboot-related preferences (below), flips the machine into server mode, and optionally installs a boot agent that re-asserts that mode after every reboot. Anything it can't do for you (a browser login, one GUI approval, a sudo grant) it prints at the end as a numbered checklist.
+`macsimize setup` is turnkey: it installs and configures **Tailscale** (private address + SSH), installs **mosh** (resilient mobile sessions), enables **Remote Login**, asks about a couple of reboot-related preferences (below), flips the machine into server mode, and optionally installs a boot agent that re-asserts that mode after every reboot. Anything it can't do for you (a browser login, one GUI approval, a sudo grant) it prints at the end as a numbered checklist.
 
 ## Expected behavior
 
@@ -66,12 +66,12 @@ For that, three pieces fit together:
 ## Commands
 
 ```sh
-bin/servermode server    # stay awake (even lid-closed), keep-awake guard, remember the mode
-bin/servermode laptop    # restore your original sleep/battery behavior
-bin/servermode status    # what mode am I in?  (read-only, no sudo)
+bin/macsimize server    # stay awake (even lid-closed), keep-awake guard, remember the mode
+bin/macsimize laptop    # restore your original sleep/battery behavior
+bin/macsimize status    # what mode am I in?  (read-only, no sudo)
 ```
 
-`scripts/setup` runs the full first-time setup; `servermode` is the day-to-day toggle once reachability is configured.
+`macsimize setup` runs the full first-time setup; `macsimize server` / `macsimize laptop` is the day-to-day toggle once reachability is configured.
 
 ## How it works
 
@@ -85,21 +85,21 @@ The only privileged actions are `pmset` and (if you opt in) the auto-update togg
 
 ## Safe & reversible
 
-- Your original power settings are snapshotted before any change; `bin/servermode laptop` restores them exactly.
+- Your original power settings are snapshotted before any change; `bin/macsimize laptop` restores them exactly.
 - Every script has a `--dry-run` (prints commands, changes nothing) and a read-only `status` / `--check`.
 - To undo everything:
   ```sh
-  bin/servermode laptop
-  bin/servermode boot-agent remove
-  sudo rm /etc/sudoers.d/macbookpro-server-pmset   # if you installed the grant
+  bin/macsimize laptop
+  bin/macsimize boot-agent remove
+  sudo rm /etc/sudoers.d/macsimize-pmset   # if you installed the grant
   ```
 
 ## Portability
 
-The repo *is* the portability story — clone it on another Mac and run `scripts/setup`. It detects laptop vs desktop (e.g. a Mac mini) and applies the right profile. See [`docs/mac-mini-playbook.md`](docs/mac-mini-playbook.md) for the mini's extra bits (power-failure restart, FileVault trade-offs).
+The repo *is* the portability story — clone it on another Mac and run `bin/macsimize setup`. It detects laptop vs desktop (e.g. a Mac mini) and applies the right profile. See [`docs/mac-mini-playbook.md`](docs/mac-mini-playbook.md) for the mini's extra bits (power-failure restart, FileVault trade-offs).
 
 More detail: [`docs/PLAN.md`](docs/PLAN.md) (design + decisions), [`docs/PROGRESS.md`](docs/PROGRESS.md) (build log), [`docs/go-live-runbook.md`](docs/go-live-runbook.md) (the human-gated steps).
 
 ## Contributing
 
-Heads up: this was built for one person's setup, so it is **not** written to be highly general yet — some things still assume specifics (a few macOS-version behaviors, Apple-Silicon-leaning power settings, Homebrew for installs, the `com.macbookpro-server.*` LaunchAgent naming). That's exactly where help is most valuable: **if you hit a spot that assumes something specific to its author's machine, please open an issue or PR to make it more general** (parameterize it, detect it, document it). Smallest useful contribution: point at the line that wouldn't work on your machine and say why.
+Heads up: this was built for one person's setup, so it is **not** written to be highly general yet — some things still assume specifics (a few macOS-version behaviors, Apple-Silicon-leaning power settings, Homebrew for installs). That's exactly where help is most valuable: **if you hit a spot that assumes something specific to its author's machine, please open an issue or PR to make it more general** (parameterize it, detect it, document it). Smallest useful contribution: point at the line that wouldn't work on your machine and say why.

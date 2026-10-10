@@ -2,6 +2,15 @@
 
 Newest first. Issue IDs are beads (`bd show <id>`).
 
+## 2026-10-10 (full rebrand) — macsimize throughout, one `macsimize` command
+
+- **`bin/servermode` → `bin/macsimize`**, now the single product entrypoint with subcommands `setup | server | laptop | status | boot-agent`. `setup` was folded in from the old `scripts/setup` via a new `lib/setup.sh` (`cmd_setup`, runs with errexit off so a soft failure becomes a checklist item); `scripts/setup` removed.
+- **LaunchAgents relabeled** `com.macbookpro-server.*` → `com.macsimize.*` (plists renamed; the install/uninstall paths now bootout + remove the old-labeled agents first, so nothing is left dangling). Boot-reassert render token `__SERVERMODE_REPO__` → `__MACSIMIZE_REPO__`; logs now `/tmp/macsimize-*.log`.
+- **sudoers install filename** `macbookpro-server-pmset` → `macsimize-pmset` for fresh installs (an existing old-named file keeps working; rename it with sudo if you want).
+- **`scripts/bootstrap`** reduced to a read-only preflight that points at `macsimize setup`. README/PLAN/runbook/playbook and all lib comments updated to the `macsimize` command surface.
+- Offline harness updated (new entrypoint + `lib/setup.sh`) and green. The two live agents on this box were migrated from the old labels to `com.macsimize.*`.
+- Note: internal beads prefix stays `macbookpro-server-*` (dev-only tracker, gitignored, not shipped).
+
 ## 2026-10-10 (rename + interactive prefs) — "macsimize"
 
 - **Renamed the repo to `macsimize`** (was `macbookpro-server` — named after one machine, which the Contributing section itself flagged as not-general). GitHub repo + `origin` remote + human-facing doc/clone references updated. Internal `com.macbookpro-server.*` LaunchAgent labels, the `macbookpro-server-pmset` sudoers filename, and the beads prefix left as-is (changing live agent labels is a separate, deliberate pass).

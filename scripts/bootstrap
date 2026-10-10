@@ -1,28 +1,24 @@
 #!/usr/bin/env bash
-# bootstrap — stand up server behavior on a fresh Mac (laptop or mini).
+# bootstrap — read-only preflight: is this Mac ready for `macsimize setup`?
 #
 # This repo owns ONLY server behavior. Your dev environment (packages, shell,
 # agentic config) is owned by your chezmoi dotfiles — run `chezmoi apply` first.
-# bootstrap checks prerequisites, then points you at `servermode server`.
+# bootstrap changes nothing; it checks prerequisites and points you at setup.
 #
 #   scripts/bootstrap            # check prerequisites + print next step
-#   scripts/bootstrap --server   # also flip into server mode now
 set -euo pipefail
 SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=../lib/common.sh
 source "$SELF_DIR/../lib/common.sh"
 
-GO_SERVER=0; [ "${1:-}" = "--server" ] && GO_SERVER=1
-
 log "bootstrap — host profile: $(host_profile)  ($(scutil --get LocalHostName 2>/dev/null || echo '?'))"
 
-missing=0
-check() { if command -v "$1" >/dev/null 2>&1; then ok "$1"; else warn "missing: $1 (install via your chezmoi dotfiles)"; missing=1; fi; }
+check() { if command -v "$1" >/dev/null 2>&1; then ok "$1"; else warn "missing: $1"; fi; }
 
 log "dev-environment tools (provided by your dotfiles, NOT this repo):"
 for c in git tmux herdr claude; do check "$c"; done
 
-log "reachability tools (this repo installs these via scripts/setup):"
+log "reachability tools (installed for you by 'macsimize setup'):"
 for c in tailscale mosh; do check "$c"; done
 
 # chezmoi applied?
@@ -36,23 +32,15 @@ fi
 if sudo -n pmset -g >/dev/null 2>&1; then
   ok "passwordless pmset grant active"
 else
-  warn "no passwordless pmset — install scripts/sudoers-pmset, or servermode will prompt for sudo."
+  warn "no passwordless pmset grant — 'macsimize' will prompt for sudo without it (optional)."
 fi
 
-echo
-if [ "$GO_SERVER" = "1" ]; then
-  log "installing boot re-assert agent + flipping into server mode..."
-  "$SELF_DIR/../bin/servermode" boot-agent install
-  exec "$SELF_DIR/../bin/servermode" server
-fi
-
-[ "$missing" = "1" ] && warn "some tools missing — reachability tools are installed by scripts/setup; dev tools come from your dotfiles."
 cat <<EOF
 
 Next:
-  scripts/setup                # ← turnkey: Tailscale + mosh + SSH + server mode, with a next-steps summary
-  bin/servermode status        # see current state anytime
+  bin/macsimize setup          # ← turnkey: Tailscale + mosh + SSH + server mode, with a next-steps summary
+  bin/macsimize status         # see current state anytime
 
-Or do the server-mode flip by itself (reachability already set up):
-  bin/servermode server
+Already set up reachability? Just flip the mode:
+  bin/macsimize server
 EOF
