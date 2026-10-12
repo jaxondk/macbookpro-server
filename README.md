@@ -26,11 +26,11 @@ Once in server mode **on AC power**, the machine stays awake and reachable while
 
 Power and reboots:
 
-- **Plugged in (AC):** never sleeps — that's the point. All settings are applied with `pmset -c` (**AC only**).
-- **On battery (unplugged):** behaves like a normal laptop and sleeps as usual, so an unplugged laptop in a bag doesn't cook itself. The battery also acts as a built-in UPS, so a brief power blip won't drop the box (this is why a laptop makes a forgiving server; a Mac mini has no battery — see the mini playbook).
+- **Plugged in (AC):** never sleeps — that's the point. Most settings are applied with `pmset -c` (**AC only**).
+- **On battery (unplugged):** ⚠️ **server mode keeps the machine awake on battery too.** The lid-closed-stay-awake flag (`disablesleep` / `SleepDisabled`) is **global in macOS** — it can't be scoped to AC, so `pmset -c` doesn't confine it. An unplugged laptop left in server mode (especially lid-shut in a bag) stays fully awake, runs the battery down, and heats up until macOS's critical-battery failsafe finally hibernates it near empty. **Flip to `bin/macsimize laptop` before you unplug and stash it** — that clears the flag so it sleeps like a normal laptop. (While plugged in, the battery still acts as a built-in UPS against brief power blips — part of why a laptop makes a forgiving server; a Mac mini has no battery, see the mini playbook.)
 - **After a reboot:** the box powers back on and the boot agent re-applies whichever mode you were last in (server stays server). **But** if FileVault is on, it waits at the unlock screen until someone types the password — SSH and daemons don't start until then. For a *planned* reboot that comes back reachable without a keyboard: `sudo fdesetup authrestart`.
 
-What it does **not** do: it won't keep the machine awake on battery, won't turn your display on, and won't change SSH, FileVault, or network settings beyond what you choose during setup.
+What it does **not** do: it won't turn your display on, and won't change SSH, FileVault, or network settings beyond what you choose during setup. It does **not** currently keep server mode from running the battery down when unplugged — that's a known limitation (a power-source-aware toggle is the planned fix); for now, flip to laptop mode before going unplugged and mobile.
 
 ## Preferences you choose at setup
 
@@ -77,7 +77,7 @@ bin/macsimize status    # what mode am I in?  (read-only, no sudo)
 
 Server mode, on AC power only:
 
-- A `pmset` profile that prevents sleep — including **lid-closed** (`disablesleep`) — keeps disk/network awake and enables power-on-after-failure.
+- A `pmset` profile that prevents sleep — including **lid-closed** (`disablesleep`) — keeps disk/network awake and enables power-on-after-failure. Note: the `sleep`/`disksleep`/etc. keys are set **AC-only** (`pmset -c`), but `disablesleep` is a **global** macOS flag (`SleepDisabled`) that can't be scoped to a power source, so it keeps the machine awake on battery too (see Expected behavior).
 - A user-level `caffeinate` LaunchAgent as a second keep-awake guard (no sudo).
 - The chosen mode is recorded in `state/desired-mode`; a boot LaunchAgent re-applies *that* mode on every boot, so a reboot or a macOS update that resets `pmset` doesn't drift you out of the mode you were in.
 

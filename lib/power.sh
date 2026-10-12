@@ -6,8 +6,12 @@
 POWER_SNAPSHOT_RAW="$STATE_DIR/pmset-backup.txt"   # human-readable full dump
 POWER_RESTORE="$STATE_DIR/pmset-restore.env"       # parsed originals we restore
 
-# Keys we touch on AC power. We only ever use `pmset -c` so battery behavior
-# (and thus "sleeps normally when unplugged / in a bag") is left untouched.
+# Keys we touch on AC power. We use `pmset -c`, which scopes MOST of these to
+# AC — EXCEPT `disablesleep`: macOS treats it as a global flag (`SleepDisabled`),
+# so it stays in effect on battery too. Net effect: server mode keeps the
+# machine awake even when unplugged (lid-shut-in-a-bag does NOT sleep). Known
+# limitation; the real fix is a power-source-aware toggle that drops
+# `disablesleep` on battery. Flip to laptop mode before going unplugged.
 POWER_KEYS=(sleep disksleep powernap womp autorestart disablesleep)
 
 # Server profile values for those keys, in the same order.

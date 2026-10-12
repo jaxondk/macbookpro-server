@@ -7,9 +7,11 @@
   <string>com.macsimize.caffeinate</string>
 
   <!-- `caffeinate -s` asserts "prevent system sleep", but ONLY while on AC
-       power. On battery the assertion is not held, so an unplugged laptop in
-       a bag still sleeps normally. This is the belt-and-suspenders guard on
-       top of the pmset profile. -->
+       power, so this agent itself does not hold on battery. NOTE: that does
+       NOT mean an unplugged laptop sleeps — the pmset `disablesleep` flag is
+       global and keeps the machine awake on battery regardless (known
+       limitation; flip to laptop mode before unplugging). This agent is just
+       the belt-and-suspenders guard on top of the pmset profile. -->
   <key>ProgramArguments</key>
   <array>
     <string>/usr/bin/caffeinate</string>

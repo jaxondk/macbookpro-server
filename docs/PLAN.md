@@ -34,15 +34,15 @@ You already run **herdr** (agent-aware multiplexer; this repo was built from ins
 
 ### Layer 1 — Stay awake & resilient
 
-A laptop is harder than a mini: it has a lid and a battery. The battery is a built-in UPS, so power-loss is a non-issue here (it matters on the mini). Server-mode applies, **AC only** (so an unplugged laptop in a bag still sleeps normally):
+A laptop is harder than a mini: it has a lid and a battery. The battery is a built-in UPS, so power-loss is a non-issue here (it matters on the mini). Most server-mode keys are applied **AC only** (`pmset -c`) — **but** `disablesleep` is a global flag (see below), so server mode keeps the machine awake on battery too. ⚠️ An unplugged laptop left in server mode does **not** sleep in a bag; flip to laptop mode before unplugging and stashing it. (Known limitation, tracked as a bug — the proper fix is a power-source-aware toggle that drops `disablesleep` on battery.)
 
 ```
 sudo pmset -c sleep 0 disksleep 0 powernap 0 womp 1 autorestart 1 disablesleep 1
 ```
 
-- `disablesleep 1` is the key one for a laptop — stay awake with the **lid closed**, no external display (true clamshell-headless). Shows up as `SleepDisabled 1` in `pmset -g`.
+- `disablesleep 1` is the key one for a laptop — stay awake with the **lid closed**, no external display (true clamshell-headless). Shows up as `SleepDisabled 1` in `pmset -g`. ⚠️ It is **global, not per-power-source**: despite setting it with `pmset -c`, macOS keeps it in effect on battery too, so server mode won't sleep when unplugged. This is the root of the "stays awake in a bag" limitation above.
 - `autorestart 1` is a no-op on this laptop (not reported) but matters on the mini.
-- A `caffeinate -s` **LaunchAgent** (user-level, no sudo) is the belt-and-suspenders guard; `-s` only asserts on AC, so battery behavior is untouched.
+- A `caffeinate -s` **LaunchAgent** (user-level, no sudo) is the belt-and-suspenders guard; `-s` only asserts on AC, so *caffeinate itself* doesn't hold on battery — but that's moot because `disablesleep` (global) keeps the machine awake on battery regardless.
 
 **Implemented by:** `bin/macsimize server` / `laptop` (snapshots originals to `state/pmset-restore.env` before first change; restore is exact).
 
